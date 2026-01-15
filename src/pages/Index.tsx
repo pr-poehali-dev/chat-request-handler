@@ -21,7 +21,8 @@ interface ActionGroup {
 }
 
 const Index = () => {
-  const [loadProgress] = useState(44);
+  const [loadProgress, setLoadProgress] = useState(44);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const actionGroups: ActionGroup[] = [
     {
@@ -94,13 +95,29 @@ const Index = () => {
     },
   ];
 
+  const handleActionClick = (actionTitle: string) => {
+    setIsProcessing(true);
+    setLoadProgress(44);
+    
+    const interval = setInterval(() => {
+      setLoadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => setIsProcessing(false), 500);
+          return 100;
+        }
+        return prev + Math.random() * 15;
+      });
+    }, 200);
+  };
+
   return (
     <div className="min-h-screen bg-background p-6 overflow-y-auto">
       <div className="max-w-3xl mx-auto space-y-6">
-        <LoadingCard progress={loadProgress} />
+        <LoadingCard progress={loadProgress} isProcessing={isProcessing} />
 
         {actionGroups.map((group, index) => (
-          <ActionGroupCard key={index} group={group} />
+          <ActionGroupCard key={index} group={group} onActionClick={handleActionClick} />
         ))}
 
         <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
@@ -113,10 +130,13 @@ const Index = () => {
   );
 };
 
-const LoadingCard = ({ progress }: { progress: number }) => {
+const LoadingCard = ({ progress, isProcessing }: { progress: number; isProcessing: boolean }) => {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-900/30 to-teal-950/30 backdrop-blur-xl border border-teal-700/30 p-6">
       <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent" />
+      {isProcessing && (
+        <div className="absolute inset-0 bg-teal-500/10 animate-pulse" />
+      )}
       
       <div className="relative flex items-center justify-between">
         <div>
@@ -158,7 +178,7 @@ const LoadingCard = ({ progress }: { progress: number }) => {
   );
 };
 
-const ActionGroupCard = ({ group }: { group: ActionGroup }) => {
+const ActionGroupCard = ({ group, onActionClick }: { group: ActionGroup; onActionClick: (title: string) => void }) => {
   const colorConfig = {
     teal: {
       gradient: 'from-teal-900/30 to-teal-950/30',
@@ -212,6 +232,7 @@ const ActionGroupCard = ({ group }: { group: ActionGroup }) => {
               borderClass={config.actionBorder}
               hoverClass={config.actionHover}
               badgeClass={config.badge}
+              onClick={() => onActionClick(action.title)}
             />
           ))}
         </div>
@@ -237,16 +258,27 @@ const ActionButton = ({
   borderClass,
   hoverClass,
   badgeClass,
+  onClick,
 }: {
   action: Action;
   bgClass: string;
   borderClass: string;
   hoverClass: string;
   badgeClass: string;
+  onClick: () => void;
 }) => {
+  const [isClicked, setIsClicked] = useState(false);
+
+  const handleClick = () => {
+    setIsClicked(true);
+    onClick();
+    setTimeout(() => setIsClicked(false), 2000);
+  };
+
   return (
     <button
-      className={`w-full rounded-xl ${bgClass} border ${borderClass} ${hoverClass} p-4 transition-all text-left group`}
+      onClick={handleClick}
+      className={`w-full rounded-xl ${bgClass} border ${borderClass} ${hoverClass} p-4 transition-all text-left group ${isClicked ? 'scale-[0.98]' : ''}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1">
@@ -274,17 +306,24 @@ const ActionButton = ({
         </Badge>
       </div>
 
-      {action.status === 'pending' && (
+      {action.status === 'pending' && !isClicked && (
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex gap-1">
             {[...Array(5)].map((_, i) => (
               <div
                 key={i}
-                className="w-1 h-1 rounded-full bg-primary/50"
-                style={{ animationDelay: `${i * 0.1}s` }}
+                className="w-1 h-1 rounded-full bg-primary/50 animate-pulse"
+                style={{ animationDelay: `${i * 0.15}s` }}
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {isClicked && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-primary animate-fade-in">
+          <Icon name="Sparkles" size={12} className="animate-pulse" />
+          <span>ИИ обрабатывает...</span>
         </div>
       )}
     </button>
